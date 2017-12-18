@@ -5,9 +5,9 @@ import os
 import cv2
 import numpy as np
 from tqdm import tqdm
-from preprocessing import parse_annotation
-from utils import draw_boxes
-from frontend import YOLO
+from src.preprocessing import parse_annotation
+from src.utils import draw_boxes
+from src.frontend import YOLO
 import json
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
