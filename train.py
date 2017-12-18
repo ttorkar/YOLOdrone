@@ -8,7 +8,7 @@ from frontend import YOLO
 import json
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]=""
 
 argparser = argparse.ArgumentParser(
     description='Train and validate YOLO_v2 model on any dataset')
@@ -66,7 +66,8 @@ def _main_(args):
                 labels              = config['model']['labels'], 
                 max_box_per_image   = config['model']['max_box_per_image'],
                 anchors             = config['model']['anchors'],
-                gpu                 = config['model']['gpu'])
+                gpu                 = config['model']['gpu']
+                )
 
     ###############################
     #   Load the pretrained weights (if any) 

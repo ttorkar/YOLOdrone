@@ -5,12 +5,13 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
+from keras.utils import multi_gpu_model
 from keras.applications.mobilenet import MobileNet
 from keras.layers.merge import concatenate
 from keras.optimizers import SGD, Adam, RMSprop
 from preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
-from utils import BoundBox, make_parallel
+from utils import BoundBox
 from backend import TinyYoloFeature, FullYoloFeature, MobileNetFeature, SqueezeNetFeature, Inception3Feature, VGG16Feature, ResNet50Feature
 
 class YOLO(object):
@@ -19,7 +20,8 @@ class YOLO(object):
                        labels, 
                        max_box_per_image,
                        anchors,
-                       gpu):
+                       gpu
+                       ):
 
         self.input_size = input_size
         
@@ -28,6 +30,7 @@ class YOLO(object):
         self.nb_box   = 5
         self.class_wt = np.ones(self.nb_class, dtype='float32')
         self.anchors  = anchors
+        self.gpu = gpu
 
         self.max_box_per_image = max_box_per_image
 
@@ -56,7 +59,7 @@ class YOLO(object):
         else:
             raise Exception('Architecture not supported! Only support Full Yolo, Tiny Yolo, MobileNet, SqueezeNet, VGG16, ResNet50, and Inception3 at the moment!')
 
-        print(self.feature_extractor.get_output_shape())    
+        print('Output Shape: ', self.feature_extractor.get_output_shape())    
         self.grid_h, self.grid_w = self.feature_extractor.get_output_shape()        
         features = self.feature_extractor.extract(input_image)            
 
@@ -68,8 +71,9 @@ class YOLO(object):
                         kernel_initializer='lecun_normal')(features)
         output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
-
-        self.model = Model([input_image, self.true_boxes], output)
+        
+        with tf.device('/cpu:0'):
+            self.model = Model([input_image, self.true_boxes], output)
         
         # initialize the weights of the detection layer
         layer = self.model.layers[-4]
@@ -81,9 +85,15 @@ class YOLO(object):
         layer.set_weights([new_kernel, new_bias])
 
         # print a summary of the whole model
+        
         self.model.summary()
         
-        self.model = make_parallel(self.model, gpu)  
+        #
+        if gpu > 1:
+            self.model = multi_gpu_model(self.model, gpus=gpu)
+            print('Running on {} GPUs'.format(gpu))
+        else:
+            print('Running on 1 GPUs')
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -426,10 +436,11 @@ class YOLO(object):
                                      monitor='val_loss', 
                                      verbose=1, 
                                      save_best_only=True, 
+                                     save_weights_only=True,
                                      mode='min', 
                                      period=1)
-        tb_counter  = len([log for log in os.listdir(os.path.expanduser('~/logs/')) if 'yolo' in log]) + 1
-        tensorboard = TensorBoard(log_dir=os.path.expanduser('~/logs/') + 'yolo' + '_' + str(tb_counter), 
+        tb_counter  = len([log for log in os.listdir(os.path.expanduser('logs/')) if 'yolo' in log]) + 1
+        tensorboard = TensorBoard(log_dir=os.path.expanduser('logs/') + 'yolo' + '_' + str(tb_counter), 
                                   histogram_freq=0, 
                                   #write_batch_performance=True,
                                   write_graph=True, 

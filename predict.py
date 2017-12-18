@@ -54,14 +54,14 @@ def _main_(args):
     #   Load trained weights
     ###############################    
 
-    print weights_path
+    print('Weights Path: ', weights_path)
     yolo.load_weights(weights_path)
 
     ###############################
     #   Predict bounding boxes 
     ###############################
 
-    if image_path[-4:] == '.mp4':
+    if image_path[-4:] == '.mp4' or image_path[-4:] == '.avi':
         video_out = image_path[:-4] + '_detected' + image_path[-4:]
 
         video_reader = cv2.VideoCapture(image_path)
@@ -75,7 +75,7 @@ def _main_(args):
                                50.0, 
                                (frame_w, frame_h))
 
-        for i in tqdm(range(nb_frames)):
+        for i in tqdm(list(range(nb_frames))):
             _, image = video_reader.read()
             
             boxes = yolo.predict(image)
@@ -90,9 +90,10 @@ def _main_(args):
         boxes = yolo.predict(image)
         image = draw_boxes(image, boxes, config['model']['labels'])
 
-        print len(boxes), 'boxes are found'
+        print(len(boxes), 'boxes are found')
 
         cv2.imwrite(image_path[:-4] + '_detected' + image_path[-4:], image)
+        cv2.imshow('Prediction',image)
 
 if __name__ == '__main__':
     args = argparser.parse_args()
