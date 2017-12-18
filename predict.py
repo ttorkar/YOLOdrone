@@ -29,7 +29,7 @@ argparser.add_argument(
 argparser.add_argument(
     '-i',
     '--input',
-    help='path to an image or an video (mp4 format)')
+    help='path to an image or an video (mp4 or avi format)')
 
 def _main_(args):
  
@@ -48,7 +48,8 @@ def _main_(args):
                 input_size          = config['model']['input_size'], 
                 labels              = config['model']['labels'], 
                 max_box_per_image   = config['model']['max_box_per_image'],
-                anchors             = config['model']['anchors'])
+                anchors             = config['model']['anchors'],
+                gpu                 = 1) #One GPU for prediction
 
     ###############################
     #   Load trained weights
