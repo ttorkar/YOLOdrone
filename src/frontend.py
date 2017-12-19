@@ -13,6 +13,7 @@ from src.preprocessing import BatchGenerator
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from src.utils import BoundBox
 from src.backend import TinyYoloFeature, FullYoloFeature, MobileNetFeature, SqueezeNetFeature, Inception3Feature, VGG16Feature, ResNet50Feature
+from keras.preprocessing.image import ImageDataGenerator
 
 class YOLO(object):
     def __init__(self, architecture,
@@ -418,6 +419,7 @@ class YOLO(object):
         train_batch = BatchGenerator(train_imgs, 
                                      generator_config, 
                                      norm=self.feature_extractor.normalize)
+        
         valid_batch = BatchGenerator(valid_imgs, 
                                      generator_config, 
                                      norm=self.feature_extractor.normalize,
