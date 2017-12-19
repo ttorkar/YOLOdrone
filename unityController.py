@@ -18,6 +18,7 @@ while 1:
     while 1:
         data = client.recv(size)
         if data:
-            print ("Unity Sent: " + str(data))
-            client.send(data)
+            parsed_json = json.loads(data)
+            print ("Unity Sent: " + str(parsed_json))
+            client.send(parsed_json)
             
