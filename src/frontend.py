@@ -20,8 +20,7 @@ class YOLO(object):
                        input_size, 
                        labels, 
                        max_box_per_image,
-                       anchors,
-                       gpu
+                       anchors
                        ):
 
         self.input_size = input_size
@@ -31,7 +30,6 @@ class YOLO(object):
         self.nb_box   = 5
         self.class_wt = np.ones(self.nb_class, dtype='float32')
         self.anchors  = anchors
-        self.gpu = gpu
 
         self.max_box_per_image = max_box_per_image
 
@@ -89,12 +87,6 @@ class YOLO(object):
         
         self.model.summary()
         
-        
-        #if gpu > 1:
-        #self.model = multi_gpu_model(self.model, gpus=2)
-        #    print('Running on {} GPUs'.format(gpu))
-        #else:
-        #    print('Running on 1 GPUs')
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -377,9 +369,16 @@ class YOLO(object):
                     coord_scale,
                     class_scale,
                     saved_weights_name='best_weights.h5',
-                    debug=False
+                    debug=False,
+                    gpu
                     ):     
 
+
+        # Replicates the model on X GPUs.
+        # This assumes that your machine has X available GPUs.
+        self.parallel_model = multi_gpu_model(model, gpus=gpu)
+        
+        
         self.batch_size = batch_size
         self.warmup_bs  = warmup_epochs * (train_times*(len(train_imgs)/batch_size+1) + valid_times*(len(valid_imgs)/batch_size+1))
 
@@ -397,7 +396,7 @@ class YOLO(object):
         ############################################
 
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-        self.model.compile(loss=self.custom_loss, optimizer=optimizer)
+        self.parallel_model.compile(loss=self.custom_loss, optimizer=optimizer)
 
         ############################################
         # Make train and validation generators
@@ -454,7 +453,7 @@ class YOLO(object):
         
 
         #self.model = multi_gpu_model(self.model, gpus=2)
-        self.model.fit_generator(generator        = train_batch, 
+        self.parallel_model.fit_generator(generator        = train_batch, 
                                  steps_per_epoch  = len(train_batch) * train_times, 
                                  epochs           = nb_epoch, 
                                  verbose          = 1,
