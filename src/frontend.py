@@ -73,8 +73,8 @@ class YOLO(object):
         output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
         
-        with tf.device('/cpu:0'):
-            self.model = Model([input_image, self.true_boxes], output)
+        with tf.device('/gpu:0'):
+              self.model = Model([input_image, self.true_boxes], output)
         
         # initialize the weights of the detection layer
         layer = self.model.layers[-4]
@@ -89,12 +89,12 @@ class YOLO(object):
         
         self.model.summary()
         
-        #
-        if gpu > 1:
-            self.model = multi_gpu_model(self.model, gpus=gpu)
-            print('Running on {} GPUs'.format(gpu))
-        else:
-            print('Running on 1 GPUs')
+        
+        #if gpu > 1:
+        #self.model = multi_gpu_model(self.model, gpus=2)
+        #    print('Running on {} GPUs'.format(gpu))
+        #else:
+        #    print('Running on 1 GPUs')
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -453,7 +453,7 @@ class YOLO(object):
         ############################################        
         
 
-
+        #self.model = multi_gpu_model(self.model, gpus=2)
         self.model.fit_generator(generator        = train_batch, 
                                  steps_per_epoch  = len(train_batch) * train_times, 
                                  epochs           = nb_epoch, 
