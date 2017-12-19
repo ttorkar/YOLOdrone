@@ -370,13 +370,15 @@ class YOLO(object):
                     class_scale,
                     saved_weights_name='best_weights.h5',
                     debug=False,
-                    gpu
+                    gpu = 1
                     ):     
 
 
-        # Replicates the model on X GPUs.
-        # This assumes that your machine has X available GPUs.
-        self.parallel_model = multi_gpu_model(model, gpus=gpu)
+        if gpu > 1:
+            print("Using %d GPUs For Training" % gpu)
+            parallel_model = multi_gpu_model(self.model, gpu)
+            parallel_model.callback_model = self.model
+            self.model = parallel_model
         
         
         self.batch_size = batch_size
@@ -396,7 +398,7 @@ class YOLO(object):
         ############################################
 
         optimizer = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-        self.parallel_model.compile(loss=self.custom_loss, optimizer=optimizer)
+        self.model.compile(loss=self.custom_loss, optimizer=optimizer)
 
         ############################################
         # Make train and validation generators
@@ -452,13 +454,12 @@ class YOLO(object):
         ############################################        
         
 
-        #self.model = multi_gpu_model(self.model, gpus=2)
-        self.parallel_model.fit_generator(generator        = train_batch, 
+        self.model.fit_generator(generator        = train_batch, 
                                  steps_per_epoch  = len(train_batch) * train_times, 
                                  epochs           = nb_epoch, 
                                  verbose          = 1,
                                  validation_data  = valid_batch,
                                  validation_steps = len(valid_batch) * valid_times,
                                  callbacks        = [early_stop, checkpoint, tensorboard], 
-                                 workers          = 3,
-                                 max_queue_size   = 8)
+                                 workers          = 4,
+                                 max_queue_size   = 32)
