@@ -17,11 +17,7 @@ while 1:
     print ("Client connected.")
     while 1:
         data = client.recv(size)
-        if data == "ping":
+        if data:
             print ("Unity Sent: " + str(data))
-            client.send("pong")
-        else:
-            client.send("Bye!")
-            print ("Unity Sent Something Else: " + str(data))
-            client.close()
-            break
+            client.send(data)
+            
