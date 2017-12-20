@@ -2,45 +2,54 @@
 # -*- coding: utf-8 -*-
 
 import socket
-import json
+from PIL import Image
+import io
 import threading
-import struct
+from darkflow.net.build import TFNet
 
 host = 'localhost' 
 port = 50000
 backlog = 20 
-size = 1000000 
+size = 1024
+ 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 s.bind((host,port)) 
 s.listen(backlog) 
 
-def function(client, address):
-    while True:
-        length = client.recv(1024).decode()
+def display(image, count):
+    image.show()
+    image.save('images/image_{}.jpg'.format(count), "JPEG")
+    image.close()
+    
+
+def recieveMsg(client, address):
+    count = 0
+    while True:  
+        
+        length = int(client.recv(size).decode())
+        print(length)
         data = b''
         while len(data) < length:
             # doing it in batches is generally better than trying
             # to do it all in one go, so I believe.
             to_read = length - len(data)
-            data += client.recv(4096 if to_read > 4096 else to_read)
-        print(data)
-        
-#    data = client.recv(size)
-#    if data:
-##            print(data.decode())
-#        try:
-#            json_data = json.loads(data.decode())
-#            print(json_data)
-#        except:
-#            print('\n\nUnable to read: \n\n', data)
+            chunk_size = 1024 if to_read > 1024 else to_read
+            chunk = client.recv(chunk_size)
+            data += chunk
+        image = Image.open(io.BytesIO(data))
+        tmpThread = threading.Thread(target=display, args=(image, count)) #  If the file is received ， Create thread 
+        tmpThread.start() #  Execution thread 
+        count += 1
 
-    
+
+
 
 while True:
     print('Waiting for Connection')
     client, address = s.accept() 
-    print ("Client {} connected on {}.".format(client, address))
-    tmpThread = threading.Thread(target=function, args=(client, address)) #  If the file is received ， Create thread 
-    tmpThread.start() #  Execution thread 
+    print ("Client connected on {}.".format(address))
+    recieveMsg(client, address)
+#    tmpThread = threading.Thread(target=recieveMsg, args=(client, address)) #  If the file is received ， Create thread 
+#    tmpThread.start() #  Execution thread 
 
                
