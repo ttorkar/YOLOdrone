@@ -6,6 +6,7 @@ import numpy as np
 from src.preprocessing import parse_annotation
 from src.frontend import YOLO
 import json
+import tensorflow as tf
 
 #os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 #os.environ["CUDA_VISIBLE_DEVICES"]="1"
@@ -65,8 +66,7 @@ def _main_(args):
                 input_size          = config['model']['input_size'], 
                 labels              = config['model']['labels'], 
                 max_box_per_image   = config['model']['max_box_per_image'],
-                anchors             = config['model']['anchors'],
-                gpu                 = config['model']['gpu']
+                anchors             = config['model']['anchors']
                 )
 
     ###############################
@@ -95,6 +95,7 @@ def _main_(args):
                class_scale        = config['train']['class_scale'],
                saved_weights_name = config['train']['saved_weights_name'],
                debug              = config['train']['debug'],
+               gpu                = config['train']['gpu']
                )
 
 if __name__ == '__main__':

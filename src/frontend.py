@@ -20,8 +20,7 @@ class YOLO(object):
                        input_size, 
                        labels, 
                        max_box_per_image,
-                       anchors,
-                       gpu
+                       anchors
                        ):
 
         self.input_size = input_size
@@ -31,7 +30,6 @@ class YOLO(object):
         self.nb_box   = 5
         self.class_wt = np.ones(self.nb_class, dtype='float32')
         self.anchors  = anchors
-        self.gpu = gpu
 
         self.max_box_per_image = max_box_per_image
 
@@ -73,8 +71,8 @@ class YOLO(object):
         output = Reshape((self.grid_h, self.grid_w, self.nb_box, 4 + 1 + self.nb_class))(output)
         output = Lambda(lambda args: args[0])([output, self.true_boxes])
         
-        with tf.device('/cpu:0'):
-            self.model = Model([input_image, self.true_boxes], output)
+        with tf.device('/gpu:0'):
+              self.model = Model([input_image, self.true_boxes], output)
         
         # initialize the weights of the detection layer
         layer = self.model.layers[-4]
@@ -89,12 +87,6 @@ class YOLO(object):
         
         self.model.summary()
         
-        #
-        if gpu > 1:
-            self.model = multi_gpu_model(self.model, gpus=gpu)
-            print('Running on {} GPUs'.format(gpu))
-        else:
-            print('Running on 1 GPUs')
 
     def custom_loss(self, y_true, y_pred):
         mask_shape = tf.shape(y_true)[:4]
@@ -377,9 +369,18 @@ class YOLO(object):
                     coord_scale,
                     class_scale,
                     saved_weights_name='best_weights.h5',
-                    debug=False
+                    debug=False,
+                    gpu = 1
                     ):     
 
+
+        if gpu > 1:
+            print("Using %d GPUs For Training" % gpu)
+            parallel_model = multi_gpu_model(self.model, gpu)
+            parallel_model.callback_model = self.model
+            self.model = parallel_model
+        
+        
         self.batch_size = batch_size
         self.warmup_bs  = warmup_epochs * (train_times*(len(train_imgs)/batch_size+1) + valid_times*(len(valid_imgs)/batch_size+1))
 
@@ -453,7 +454,6 @@ class YOLO(object):
         ############################################        
         
 
-
         self.model.fit_generator(generator        = train_batch, 
                                  steps_per_epoch  = len(train_batch) * train_times, 
                                  epochs           = nb_epoch, 
@@ -461,5 +461,5 @@ class YOLO(object):
                                  validation_data  = valid_batch,
                                  validation_steps = len(valid_batch) * valid_times,
                                  callbacks        = [early_stop, checkpoint, tensorboard], 
-                                 workers          = 3,
-                                 max_queue_size   = 8)
+                                 workers          = 4,
+                                 max_queue_size   = 32)
