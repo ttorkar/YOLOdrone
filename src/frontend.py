@@ -369,17 +369,8 @@ class YOLO(object):
                     coord_scale,
                     class_scale,
                     saved_weights_name='best_weights.h5',
-                    debug=False,
-                    gpu = 1
-                    ):     
-
-
-        if gpu > 1:
-            print("Using %d GPUs For Training" % gpu)
-            parallel_model = multi_gpu_model(self.model, gpu)
-            parallel_model.callback_model = self.model
-            self.model = parallel_model
-        
+                    debug=False
+                    ):             
         
         self.batch_size = batch_size
         self.warmup_bs  = warmup_epochs * (train_times*(len(train_imgs)/batch_size+1) + valid_times*(len(valid_imgs)/batch_size+1))

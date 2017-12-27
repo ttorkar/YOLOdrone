@@ -7,6 +7,7 @@ from src.preprocessing import parse_annotation
 from src.frontend import YOLO
 import json
 import tensorflow as tf
+from keras.utils import multi_gpu_model
 
 #os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 #os.environ["CUDA_VISIBLE_DEVICES"]="1"
@@ -61,13 +62,14 @@ def _main_(args):
     ###############################
     #   Construct the model 
     ###############################
-
-    yolo = YOLO(architecture        = config['model']['architecture'],
-                input_size          = config['model']['input_size'], 
-                labels              = config['model']['labels'], 
-                max_box_per_image   = config['model']['max_box_per_image'],
-                anchors             = config['model']['anchors']
-                )
+    
+    with tf.device('/cpu:0'):
+        yolo = YOLO(architecture        = config['model']['architecture'],
+                    input_size          = config['model']['input_size'], 
+                    labels              = config['model']['labels'], 
+                    max_box_per_image   = config['model']['max_box_per_image'],
+                    anchors             = config['model']['anchors']
+                    )
 
     ###############################
     #   Load the pretrained weights (if any) 
@@ -81,7 +83,9 @@ def _main_(args):
     #   Start the training process 
     ###############################
 
-    yolo.train(train_imgs         = train_imgs,
+    parallel_model = multi_gpu_model(yolo, gpus=config['train']['gpu'])
+
+    parallel_model.train(train_imgs         = train_imgs,
                valid_imgs         = valid_imgs,
                train_times        = config['train']['train_times'],
                valid_times        = config['valid']['valid_times'],
